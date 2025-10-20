@@ -5,4 +5,6 @@ __all__ = [
     "livekit_mcp_agent",
     "french_voice_tutor",
     "french_voice_tutor_plus",
+    "universal_agent",
+    "simple_universal_agent",
 ]

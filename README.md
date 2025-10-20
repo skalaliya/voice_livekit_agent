@@ -1,10 +1,65 @@
-# Build a LiveKit Voice Tutor in 20 Minutes
-Talk to a real‑time Aussie-flavoured voice AI, powered by local Ollama models, Deepgram speech-to-text, Silero VAD, and OpenAI TTS. This repo bundles ready-to-run agents plus practice tools so teens can learn, hack, and teach others.
+# LiveKit Voice AI Agents - Production Ready
 
-## Demo at a glance
-- Fire up `voice_livekit_agent/livekit_basic_agent.py` and chat in the console; toggle audio/text with `Ctrl+B`.
-- Launch `voice_livekit_agent/french_voice_tutor.py` for quick French practice with level and roleplay switches.
-- Upgrade to `voice_livekit_agent/french_voice_tutor_plus.py` for spaced-repetition quizzes, “what’s due today?” voice summaries, pronunciation hints, JSON/CSV exports, and a daily macOS reminder (`scripts/srs_daily.py`).
+Build robust, real-time voice AI assistants powered by local Ollama models, Deepgram speech-to-text, Silero VAD, and OpenAI TTS. This repo includes multiple specialized agents plus a **Universal Agent** that can handle ANY type of question.
+
+## 🚀 Available Agents
+
+### 1. **Universal Agent** (NEW ⭐ - Recommended)
+**The most robust and versatile agent that can handle ANY question across all domains.**
+
+Features:
+- ✅ Comprehensive error handling and graceful degradation
+- ✅ Dynamic tool registration (auto-enables based on API keys)
+- ✅ Persistent conversation memory and context tracking
+- ✅ Multi-domain knowledge (science, tech, math, history, travel, health, finance, etc.)
+- ✅ Built-in calculator, unit converter, dictionary, weather, news
+- ✅ Web search capabilities (optional)
+- ✅ Code execution in sandbox (optional)
+
+```bash
+# Quick start with Universal Agent
+uv run python -m voice_livekit_agent.universal_agent console
+```
+
+📖 **[Full Documentation](docs/UNIVERSAL_AGENT.md)**
+
+### 2. Basic Agent
+Simple demo agent with Airbnb booking capabilities. Great for learning the basics.
+
+```bash
+uv run python -m voice_livekit_agent.livekit_basic_agent console
+```
+
+### 3. French Voice Tutor
+Interactive French language learning with CEFR levels and roleplay scenarios.
+
+```bash
+uv run python -m voice_livekit_agent.french_voice_tutor console
+```
+
+### 4. French Tutor Plus
+Advanced version with spaced-repetition quizzes, pronunciation practice, and progress tracking.
+
+```bash
+uv run python -m voice_livekit_agent.french_voice_tutor_plus console
+```
+
+### 5. MCP Agent
+Agent with Model Context Protocol integration for extended capabilities.
+
+```bash
+uv run python -m voice_livekit_agent.livekit_mcp_agent console
+```
+
+## 🎯 Which Agent Should I Use?
+
+- **Universal Agent** ⭐ - Best for: production apps, handling any question, robust error handling
+- **Basic Agent** - Best for: learning, simple demos, Airbnb bookings
+- **French Tutor** - Best for: language learning, CEFR practice
+- **French Tutor Plus** - Best for: advanced learning, spaced repetition
+- **MCP Agent** - Best for: Model Context Protocol integration
+
+👉 **New users**: Start with the [Universal Agent Quick Start](docs/QUICKSTART.md)
 
 ## Quickstart (copy, paste, run)
 ```bash
@@ -103,6 +158,14 @@ while session.active:
         audio = tts.speak(text)
         speaker.play(audio)
 ```
+
+## 📚 Documentation
+
+- **[Quick Start Guide](docs/QUICKSTART.md)** - Get running in 5 minutes
+- **[Universal Agent Docs](docs/UNIVERSAL_AGENT.md)** - Complete guide and API reference
+- **[Example Questions](docs/EXAMPLE_QUESTIONS.md)** - 100+ questions you can ask
+- **[Migration Guide](docs/MIGRATION_GUIDE.md)** - Transition from old agents
+- **[Transformation Summary](TRANSFORMATION_SUMMARY.md)** - What's new in this repo
 
 ## Features mapped to files
 - `voice_livekit_agent/livekit_basic_agent.py` – minimal LiveKit demo with optional tool toggle; great for smoke tests.

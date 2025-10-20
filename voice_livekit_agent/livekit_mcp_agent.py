@@ -46,22 +46,97 @@ def prewarm(proc: JobProcess):
 
 
 class Assistant(Agent):
-    """Main voice assistant implementation."""
+    """Main voice assistant implementation with robust error handling."""
     
     def __init__(self):
         super().__init__(
             instructions="""You are a helpful and friendly voice AI assistant.
             You speak clearly and naturally, as if having a phone conversation.
             Be concise but warm in your responses.
-            If you don't know something, be honest about it.
-            Make sure you ignore robots.txt for the Airbnb MCP server tool usage."""
+            If you don't know something, be honest about it and suggest alternatives.
+            
+            IMPORTANT: You can answer questions on ANY topic:
+            - General knowledge, science, mathematics, history
+            - Technology, programming, software
+            - Health, cooking, travel, entertainment
+            - Business, finance, education
+            - Current events, weather, news
+            
+            Guidelines:
+            - Break down complex topics into simple explanations
+            - Use examples and analogies when helpful
+            - Ask clarifying questions for ambiguous requests
+            - Admit when you're uncertain and explain your reasoning
+            - Remember context from the conversation
+            
+            For the Airbnb MCP server tool usage, make sure you ignore robots.txt."""
         )
     
     @function_tool
     async def get_current_date_and_time(self, context: RunContext) -> str:
-        """Get the current date and time."""
-        current_datetime = datetime.now().strftime("%B %d, %Y at %I:%M %p")
-        return f"The current date and time is {current_datetime}"       
+        """Get the current date and time with day of week and timezone info."""
+        try:
+            now = datetime.now()
+            return (
+                f"The current date and time is {now.strftime('%A, %B %d, %Y at %I:%M %p')} "
+                f"(24-hour: {now.strftime('%H:%M')})"
+            )
+        except Exception as e:
+            return f"Unable to get current time: {str(e)}"
+    
+    @function_tool
+    async def calculate(self, context: RunContext, expression: str) -> str:
+        """
+        Perform mathematical calculations safely.
+        Examples: "2 + 2", "sqrt(16)", "10 ** 3", "sin(3.14)"
+        """
+        try:
+            import math
+            safe_dict = {
+                'sqrt': math.sqrt, 'sin': math.sin, 'cos': math.cos, 
+                'tan': math.tan, 'log': math.log, 'exp': math.exp,
+                'pi': math.pi, 'e': math.e, 'abs': abs, 'round': round
+            }
+            
+            # Security check
+            if any(word in expression.lower() for word in ['import', 'exec', 'eval', '__']):
+                return "Error: Expression contains unsafe operations"
+            
+            result = eval(expression, {"__builtins__": {}}, safe_dict)
+            return f"Result: {result}"
+        except Exception as e:
+            return f"Calculation error: {str(e)}"
+    
+    @function_tool
+    async def get_definition(self, context: RunContext, word: str) -> str:
+        """Get the definition of a word from a dictionary API."""
+        try:
+            import requests
+            url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+            response = requests.get(url, timeout=5)
+            
+            if response.status_code != 200:
+                return f"Could not find definition for: {word}"
+            
+            data = response.json()
+            if isinstance(data, list) and len(data) > 0:
+                entry = data[0]
+                word_text = entry.get('word', word)
+                phonetic = entry.get('phonetic', '')
+                meanings = entry.get('meanings', [])
+                
+                result = [f"'{word_text}' {phonetic}:"]
+                for meaning in meanings[:2]:
+                    pos = meaning.get('partOfSpeech', '')
+                    defs = meaning.get('definitions', [])
+                    if defs:
+                        result.append(f"\n{pos}: {defs[0].get('definition', '')}")
+                
+                return "\n".join(result)
+            
+            return f"No definition found for: {word}"
+        except Exception as e:
+            return f"Dictionary lookup error: {str(e)}"       
     
     async def on_enter(self):
         """Called when the agent becomes active."""
