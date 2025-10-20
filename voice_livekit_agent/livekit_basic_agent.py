@@ -39,7 +39,7 @@ import requests
 from dotenv import load_dotenv
 
 from livekit import agents
-from livekit.agents import Agent, AgentSession, RunContext
+from livekit.agents import Agent, AgentSession, RunContext, io
 from livekit.agents.llm import function_tool
 from livekit.plugins import openai, deepgram, silero
 
@@ -62,6 +62,11 @@ def _require_env(keys: list[str]) -> None:
             + "\nTip: add them to your .env (do NOT commit secrets)."
         )
 
+def _disable_tool(func) -> None:
+    """Remove LiveKit tool metadata so the model cannot invoke the function."""
+    if hasattr(func, "__livekit_tool_info"):
+        delattr(func, "__livekit_tool_info")
+
 # load .env once at import
 load_dotenv(".env")
 
@@ -76,8 +81,8 @@ class Assistant(Agent):
         super().__init__(
             instructions=(
                 "You are a helpful and friendly Airbnb voice assistant. "
-                "You can help users search for Airbnbs in different cities and book their stays. "
-                "Keep responses concise and natural, like a conversation."
+                "Chat naturally with the user and keep conversations flowing. "
+                "Only call the Airbnb tools when the user clearly asks for listings, availability, or booking help."
             )
         )
 
@@ -220,6 +225,32 @@ class Assistant(Agent):
         )
 
 
+class ConsoleTextSink(io.TextOutput):
+    """Mirror agent replies into the terminal while preserving the existing sink chain."""
+
+    def __init__(
+        self,
+        *,
+        label: str = "console_logger",
+        next_in_chain: io.TextOutput | None = None,
+    ) -> None:
+        super().__init__(label=label, next_in_chain=next_in_chain)
+        self._buffer: list[str] = []
+
+    async def capture_text(self, text: str) -> None:  # type: ignore[override]
+        self._buffer.append(text)
+        print(f"[Agent] {text}", end="", flush=True)
+        if self.next_in_chain:
+            await self.next_in_chain.capture_text(text)
+
+    def flush(self) -> None:  # type: ignore[override]
+        if self._buffer:
+            print()
+            self._buffer.clear()
+        if self.next_in_chain:
+            self.next_in_chain.flush()
+
+
 # -------------------------
 # LLM-only smoke test (no audio)
 # -------------------------
@@ -294,9 +325,9 @@ async def entrypoint(ctx: agents.JobContext):
 
     # Optional: disable function tools unless explicitly enabled
     if not _flag("USE_TOOLS", "false"):
-        Assistant.get_current_date_and_time.livekit_tool = False
-        Assistant.search_airbnbs.livekit_tool = False
-        Assistant.book_airbnb.livekit_tool = False
+        _disable_tool(Assistant.get_current_date_and_time)
+        _disable_tool(Assistant.search_airbnbs)
+        _disable_tool(Assistant.book_airbnb)
 
     # 4) Audio stack (requires keys)
     _require_env(["DEEPGRAM_API_KEY"])
@@ -330,6 +361,8 @@ async def entrypoint(ctx: agents.JobContext):
         tts=tts,
         vad=vad,
     )
+    existing_transcript_sink = session.output.transcription
+    session.output.transcription = ConsoleTextSink(next_in_chain=existing_transcript_sink)
 
     await session.start(room=ctx.room, agent=Assistant())
 
